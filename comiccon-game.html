@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comiccon Adventure - Mundo Abierto</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            background: #1a1a2e;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            max-width: 95vw;
+        }
+
+        #gameCanvas {
+            border: 3px solid #ff6b6b;
+            border-radius: 10px;
+            background: #0f3460;
+            display: block;
+        }
+
+        #gameInfo {
+            color: white;
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        #dialogBox {
+            display: none;
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(26, 26, 46, 0.95);
+            border: 3px solid #ff6b6b;
+            border-radius: 15px;
+            padding: 20px;
+            max-width: 600px;
+            color: white;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+        }
+
+        #dialogBox.active {
+            display: block;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateX(-50%) translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        #npcName {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ff6b6b;
+            margin-bottom: 10px;
+        }
+
+        #dialogText {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        #dialogHint {
+            font-size: 12px;
+            color: #aaa;
+            text-align: right;
+        }
+
+        .controls {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .key {
+            display: inline-block;
+            background: #ff6b6b;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin: 0 3px;
+            font-weight: bold;
+        }
+
+        h1 {
+            color: #ff6b6b;
+            text-align: center;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <h1>🎮 Comiccon Adventure 🎨</h1>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="gameInfo">
+            <div class="controls">
+                <strong>Controles:</strong>
+                <span class="key">WASD</span> o <span class="key">Flechas</span> - Mover |
+                <span class="key">E</span> - Interactuar con NPCs
+            </div>
+            <div style="margin-top: 8px;">
+                <strong>Objetivo:</strong> Explora la comiccon y habla con todos los personajes que encuentres!
+            </div>
+        </div>
+    </div>
+
+    <div id="dialogBox">
+        <div id="npcName"></div>
+        <div id="dialogText"></div>
+        <div id="dialogHint">Presiona E para cerrar</div>
+    </div>
+
+    <script>
+        // Configuración del juego
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const TILE_SIZE = 32;
+        const COLS = Math.floor(canvas.width / TILE_SIZE);
+        const ROWS = Math.floor(canvas.height / TILE_SIZE);
+
+        // Estado del juego
+        const game = {
+            player: {
+                x: 5,
+                y: 5,
+                color: '#4ecdc4',
+                speed: 1
+            },
+            keys: {},
+            dialogActive: false,
+            currentNPC: null,
+            camera: { x: 0, y: 0 }
+        };
+
+        // Definición del mapa (0 = piso, 1 = pared/obstáculo, 2 = stand, 3 = escenario, 4 = mesa)
+        const worldMap = [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,2,2,0,0,2,2,0,0,1,0,3,3,3,3,3,0,0,4,4,0,0,0,1],
+            [1,0,2,2,0,0,2,2,0,0,1,0,3,3,3,3,3,0,0,4,4,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,1,0,3,3,3,3,3,0,0,0,0,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,2,2,0,0,2,2,0,0,0,0,0,0,0,0,0,0,0,4,4,0,0,0,1],
+            [1,0,2,2,0,0,2,2,0,0,1,0,0,0,0,0,0,0,0,4,4,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,1,0,2,2,0,0,2,2,0,0,0,0,0,0,1],
+            [1,1,1,0,0,0,0,1,1,1,1,0,2,2,0,0,2,2,0,0,0,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,0,0,0,1],
+            [1,0,4,4,0,0,4,4,0,0,0,0,0,0,0,0,0,0,0,4,4,0,0,0,1],
+            [1,0,4,4,0,0,4,4,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,1,0,2,2,0,0,2,2,0,0,0,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,1,0,2,2,0,0,2,2,0,0,0,0,0,0,1],
+            [1,0,2,2,0,0,2,2,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,2,2,0,0,2,2,0,0,0,0,0,0,0,0,0,0,0,4,4,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ];
+
+        // Colores para diferentes tipos de tiles
+        const tileColors = {
+            0: '#2d4059',  // Piso
+            1: '#ea5455',  // Pared
+            2: '#f07b3f',  // Stand
+            3: '#ffd460',  // Escenario
+            4: '#4a90e2'   // Mesa
+        };
+
+        // NPCs en la comiccon
+        const npcs = [
+            {
+                x: 7, y: 3,
+                name: 'Vendedor de Comics',
+                color: '#e74c3c',
+                dialog: '¡Bienvenido a mi stand! Tengo los mejores comics de superhéroes. ¿Sabías que el primer comic de Superman se vendió por 3 millones de dólares? 🦸‍♂️'
+            },
+            {
+                x: 13, y: 3,
+                name: 'Cosplayer de Anime',
+                color: '#9b59b6',
+                dialog: '¡Konnichiwa! Me tomó 3 meses hacer este cosplay de mi personaje favorito. ¿Te gusta el anime? ¡Este evento es increíble! 🎌'
+            },
+            {
+                x: 20, y: 3,
+                name: 'Artista Digital',
+                color: '#3498db',
+                dialog: 'Estoy dibujando comisiones en vivo. Me especializo en arte digital de personajes. ¡Si quieres un retrato tuyo como superhéroe, avísame! 🎨'
+            },
+            {
+                x: 3, y: 7,
+                name: 'Coleccionista de Figuras',
+                color: '#e67e22',
+                dialog: 'Tengo más de 500 figuras en casa. Estas que ves aquí son ediciones limitadas muy raras. ¡Algunas valen más de $1000! 🗿'
+            },
+            {
+                x: 15, y: 10,
+                name: 'Escritor de Manga',
+                color: '#1abc9c',
+                dialog: 'Estoy promocionando mi nuevo manga. Se trata de un mundo donde los sueños se vuelven realidad. ¿Te gustaría leer el primer capítulo? 📚'
+            },
+            {
+                x: 20, y: 12,
+                name: 'Gamer Profesional',
+                color: '#f39c12',
+                dialog: 'Juego profesionalmente desde hace 5 años. Aquí estoy representando a mi equipo. ¿Juegas videojuegos? ¡Deberías unirte a nuestro torneo! 🎮'
+            },
+            {
+                x: 7, y: 13,
+                name: 'Fan de Star Wars',
+                color: '#2ecc71',
+                dialog: '¡Que la fuerza te acompañe! He visto todas las películas al menos 20 veces. Mi sable de luz es réplica exacta de la película. ⭐'
+            },
+            {
+                x: 15, y: 15,
+                name: 'Organizador del Evento',
+                color: '#34495e',
+                dialog: 'Gracias por venir a nuestra comiccon. Tenemos más de 2000 asistentes este año. ¡Espero que disfrutes todos los stands y actividades! 🎪'
+            },
+            {
+                x: 3, y: 17,
+                name: 'Streamer de Twitch',
+                color: '#ff6b9d',
+                dialog: '¡Estoy haciendo stream en vivo desde la comiccon! Tengo 50k seguidores. Si me ayudas a encontrar contenido interesante, te doy un shoutout. 📱'
+            },
+            {
+                x: 20, y: 17,
+                name: 'Fan de DC Comics',
+                color: '#95a5a6',
+                dialog: 'Batman es el mejor superhéroe, punto. No tiene superpoderes pero aún así salva el mundo. ¡Eso es lo que lo hace especial! 🦇'
+            }
+        ];
+
+        // Sistema de Input
+        document.addEventListener('keydown', (e) => {
+            game.keys[e.key.toLowerCase()] = true;
+
+            // Interacción con NPCs
+            if (e.key.toLowerCase() === 'e') {
+                if (game.dialogActive) {
+                    closeDialog();
+                } else {
+                    checkNPCInteraction();
+                }
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            game.keys[e.key.toLowerCase()] = false;
+        });
+
+        // Movimiento del jugador
+        function updatePlayer() {
+            if (game.dialogActive) return;
+
+            const oldX = game.player.x;
+            const oldY = game.player.y;
+
+            // Movimiento con WASD o flechas
+            if (game.keys['w'] || game.keys['arrowup']) {
+                game.player.y -= game.player.speed;
+            }
+            if (game.keys['s'] || game.keys['arrowdown']) {
+                game.player.y += game.player.speed;
+            }
+            if (game.keys['a'] || game.keys['arrowleft']) {
+                game.player.x -= game.player.speed;
+            }
+            if (game.keys['d'] || game.keys['arrowright']) {
+                game.player.x += game.player.speed;
+            }
+
+            // Verificar colisiones con el mapa
+            if (isColliding(game.player.x, game.player.y)) {
+                game.player.x = oldX;
+                game.player.y = oldY;
+            }
+
+            // Verificar colisiones con NPCs
+            for (let npc of npcs) {
+                if (isCollidingWithNPC(game.player.x, game.player.y, npc)) {
+                    game.player.x = oldX;
+                    game.player.y = oldY;
+                    break;
+                }
+            }
+
+            // Mantener al jugador dentro de los límites
+            game.player.x = Math.max(0, Math.min(worldMap[0].length - 1, game.player.x));
+            game.player.y = Math.max(0, Math.min(worldMap.length - 1, game.player.y));
+        }
+
+        // Detectar colisiones con el mapa
+        function isColliding(x, y) {
+            const gridX = Math.floor(x);
+            const gridY = Math.floor(y);
+
+            if (gridY < 0 || gridY >= worldMap.length || gridX < 0 || gridX >= worldMap[0].length) {
+                return true;
+            }
+
+            return worldMap[gridY][gridX] === 1;
+        }
+
+        // Detectar colisiones con NPCs
+        function isCollidingWithNPC(x, y, npc) {
+            const distance = Math.sqrt(Math.pow(x - npc.x, 2) + Math.pow(y - npc.y, 2));
+            return distance < 0.8;
+        }
+
+        // Verificar interacción con NPCs
+        function checkNPCInteraction() {
+            for (let npc of npcs) {
+                const distance = Math.sqrt(
+                    Math.pow(game.player.x - npc.x, 2) +
+                    Math.pow(game.player.y - npc.y, 2)
+                );
+
+                if (distance < 1.5) {
+                    showDialog(npc);
+                    return;
+                }
+            }
+        }
+
+        // Mostrar diálogo
+        function showDialog(npc) {
+            game.dialogActive = true;
+            game.currentNPC = npc;
+
+            const dialogBox = document.getElementById('dialogBox');
+            const npcName = document.getElementById('npcName');
+            const dialogText = document.getElementById('dialogText');
+
+            npcName.textContent = npc.name;
+            dialogText.textContent = npc.dialog;
+            dialogBox.classList.add('active');
+        }
+
+        // Cerrar diálogo
+        function closeDialog() {
+            game.dialogActive = false;
+            game.currentNPC = null;
+
+            const dialogBox = document.getElementById('dialogBox');
+            dialogBox.classList.remove('active');
+        }
+
+        // Renderizar el mapa
+        function drawMap() {
+            for (let row = 0; row < worldMap.length; row++) {
+                for (let col = 0; col < worldMap[row].length; col++) {
+                    const tile = worldMap[row][col];
+                    const x = col * TILE_SIZE;
+                    const y = row * TILE_SIZE;
+
+                    ctx.fillStyle = tileColors[tile];
+                    ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+
+                    // Bordes de tiles
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE);
+
+                    // Decoración extra para stands y escenario
+                    if (tile === 2) {
+                        ctx.fillStyle = '#d35400';
+                        ctx.fillRect(x + 5, y + 5, TILE_SIZE - 10, TILE_SIZE - 10);
+                    } else if (tile === 3) {
+                        ctx.fillStyle = '#f39c12';
+                        ctx.fillRect(x + 3, y + 3, TILE_SIZE - 6, TILE_SIZE - 6);
+                    } else if (tile === 4) {
+                        ctx.fillStyle = '#2980b9';
+                        ctx.fillRect(x + 4, y + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+                    }
+                }
+            }
+        }
+
+        // Renderizar NPCs
+        function drawNPCs() {
+            for (let npc of npcs) {
+                const x = npc.x * TILE_SIZE;
+                const y = npc.y * TILE_SIZE;
+
+                // Cuerpo del NPC
+                ctx.fillStyle = npc.color;
+                ctx.beginPath();
+                ctx.arc(x + TILE_SIZE/2, y + TILE_SIZE/2, 12, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Borde
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Indicador de interacción si está cerca
+                const distance = Math.sqrt(
+                    Math.pow(game.player.x - npc.x, 2) +
+                    Math.pow(game.player.y - npc.y, 2)
+                );
+
+                if (distance < 1.5) {
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 14px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('E', x + TILE_SIZE/2, y - 8);
+
+                    // Indicador flotante
+                    const bounce = Math.sin(Date.now() / 200) * 3;
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.beginPath();
+                    ctx.arc(x + TILE_SIZE/2, y - 20 + bounce, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Nombre del NPC (pequeño)
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(npc.name, x + TILE_SIZE/2, y + TILE_SIZE + 12);
+            }
+        }
+
+        // Renderizar jugador
+        function drawPlayer() {
+            const x = game.player.x * TILE_SIZE;
+            const y = game.player.y * TILE_SIZE;
+
+            // Sombra
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(x + TILE_SIZE/2, y + TILE_SIZE - 3, 10, 5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Cuerpo del jugador
+            ctx.fillStyle = game.player.color;
+            ctx.beginPath();
+            ctx.arc(x + TILE_SIZE/2, y + TILE_SIZE/2, 14, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Borde
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Indicador de dirección
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(x + TILE_SIZE/2, y + TILE_SIZE/2 - 5, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Loop principal del juego
+        function gameLoop() {
+            // Limpiar canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Actualizar
+            updatePlayer();
+
+            // Renderizar
+            drawMap();
+            drawNPCs();
+            drawPlayer();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Iniciar el juego
+        console.log('🎮 Comiccon Adventure - Juego iniciado!');
+        console.log('Explora el mundo y habla con los NPCs usando la tecla E');
+        gameLoop();
+    </script>
+</body>
+</html>
