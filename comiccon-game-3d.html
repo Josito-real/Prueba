@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comiccon Adventure 3D - Mundo Abierto</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        #gameInfo {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            padding: 15px 20px;
+            background: rgba(26, 26, 46, 0.9);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 2px solid #ff6b6b;
+            max-width: 400px;
+            z-index: 100;
+        }
+
+        #title {
+            font-size: 24px;
+            color: #ff6b6b;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .controls {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .key {
+            display: inline-block;
+            background: #ff6b6b;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin: 0 2px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        #dialogBox {
+            display: none;
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(26, 26, 46, 0.95);
+            border: 3px solid #ff6b6b;
+            border-radius: 15px;
+            padding: 20px 30px;
+            max-width: 600px;
+            color: white;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+            z-index: 100;
+        }
+
+        #dialogBox.active {
+            display: block;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateX(-50%) translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        #npcName {
+            font-size: 20px;
+            font-weight: bold;
+            color: #ff6b6b;
+            margin-bottom: 10px;
+        }
+
+        #dialogText {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        #dialogHint {
+            font-size: 12px;
+            color: #aaa;
+            text-align: right;
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            color: white;
+            padding: 10px 15px;
+            background: rgba(26, 26, 46, 0.8);
+            border-radius: 8px;
+            font-size: 13px;
+            backdrop-filter: blur(10px);
+            border: 2px solid #ff6b6b;
+            z-index: 100;
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            z-index: 200;
+        }
+
+        .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #ff6b6b;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="loading">
+            <div>Cargando Comiccon Adventure 3D...</div>
+            <div class="loading-spinner"></div>
+        </div>
+
+        <div id="gameInfo">
+            <div id="title">🎮 Comiccon 3D 🎨</div>
+            <div class="controls">
+                <div><span class="key">WASD</span> - Mover</div>
+                <div><span class="key">Mouse</span> - Girar cámara</div>
+                <div><span class="key">E</span> - Interactuar</div>
+                <div><span class="key">SHIFT</span> - Correr</div>
+                <div style="margin-top: 8px; font-size: 12px;">
+                    ¡Explora la comiccon y habla con los 10 NPCs!
+                </div>
+            </div>
+        </div>
+
+        <div id="instructions">
+            Click en la pantalla para controlar la cámara
+        </div>
+    </div>
+
+    <div id="dialogBox">
+        <div id="npcName"></div>
+        <div id="dialogText"></div>
+        <div id="dialogHint">Presiona E para cerrar</div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+
+        // Configuración del juego
+        let scene, camera, renderer, controls;
+        let player, playerVelocity, playerDirection;
+        let clock, delta;
+        let raycaster;
+
+        const TILE_SIZE = 4;
+        const WALL_HEIGHT = 6;
+        const PLAYER_HEIGHT = 2;
+        const PLAYER_SPEED = 15;
+        const PLAYER_RUN_SPEED = 25;
+
+        // Estado del juego
+        const game = {
+            keys: {},
+            dialogActive: false,
+            currentNPC: null,
+            npcs: [],
+            npcMeshes: [],
+            collisionObjects: []
+        };
+
+        // Definición del mapa (igual que antes)
+        const worldMap = [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,2,2,0,0,2,2,0,0,1,0,3,3,3,3,3,0,0,4,4,0,0,0,1],
+            [1,0,2,2,0,0,2,2,0,0,1,0,3,3,3,3,3,0,0,4,4,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,1,0,3,3,3,3,3,0,0,0,0,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,2,2,0,0,2,2,0,0,0,0,0,0,0,0,0,0,0,4,4,0,0,0,1],
+            [1,0,2,2,0,0,2,2,0,0,1,0,0,0,0,0,0,0,0,4,4,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,1,0,2,2,0,0,2,2,0,0,0,0,0,0,1],
+            [1,1,1,0,0,0,0,1,1,1,1,0,2,2,0,0,2,2,0,0,0,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,0,0,0,1],
+            [1,0,4,4,0,0,4,4,0,0,0,0,0,0,0,0,0,0,0,4,4,0,0,0,1],
+            [1,0,4,4,0,0,4,4,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,1,0,2,2,0,0,2,2,0,0,0,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,1,0,2,2,0,0,2,2,0,0,0,0,0,0,1],
+            [1,0,2,2,0,0,2,2,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,2,2,0,0,2,2,0,0,0,0,0,0,0,0,0,0,0,4,4,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ];
+
+        // Colores para diferentes tipos de tiles
+        const tileMaterials = {
+            0: new THREE.MeshStandardMaterial({ color: 0x2d4059, roughness: 0.8 }), // Piso
+            1: new THREE.MeshStandardMaterial({ color: 0xea5455, roughness: 0.6 }), // Pared
+            2: new THREE.MeshStandardMaterial({ color: 0xf07b3f, roughness: 0.7 }), // Stand
+            3: new THREE.MeshStandardMaterial({ color: 0xffd460, roughness: 0.5 }), // Escenario
+            4: new THREE.MeshStandardMaterial({ color: 0x4a90e2, roughness: 0.7 })  // Mesa
+        };
+
+        // NPCs en la comiccon
+        const npcData = [
+            {
+                x: 7, z: 3,
+                name: 'Vendedor de Comics',
+                color: 0xe74c3c,
+                dialog: '¡Bienvenido a mi stand! Tengo los mejores comics de superhéroes. ¿Sabías que el primer comic de Superman se vendió por 3 millones de dólares? 🦸‍♂️'
+            },
+            {
+                x: 13, z: 3,
+                name: 'Cosplayer de Anime',
+                color: 0x9b59b6,
+                dialog: '¡Konnichiwa! Me tomó 3 meses hacer este cosplay de mi personaje favorito. ¿Te gusta el anime? ¡Este evento es increíble! 🎌'
+            },
+            {
+                x: 20, z: 3,
+                name: 'Artista Digital',
+                color: 0x3498db,
+                dialog: 'Estoy dibujando comisiones en vivo. Me especializo en arte digital de personajes. ¡Si quieres un retrato tuyo como superhéroe, avísame! 🎨'
+            },
+            {
+                x: 3, z: 7,
+                name: 'Coleccionista de Figuras',
+                color: 0xe67e22,
+                dialog: 'Tengo más de 500 figuras en casa. Estas que ves aquí son ediciones limitadas muy raras. ¡Algunas valen más de $1000! 🗿'
+            },
+            {
+                x: 15, z: 10,
+                name: 'Escritor de Manga',
+                color: 0x1abc9c,
+                dialog: 'Estoy promocionando mi nuevo manga. Se trata de un mundo donde los sueños se vuelven realidad. ¿Te gustaría leer el primer capítulo? 📚'
+            },
+            {
+                x: 20, z: 12,
+                name: 'Gamer Profesional',
+                color: 0xf39c12,
+                dialog: 'Juego profesionalmente desde hace 5 años. Aquí estoy representando a mi equipo. ¿Juegas videojuegos? ¡Deberías unirte a nuestro torneo! 🎮'
+            },
+            {
+                x: 7, z: 13,
+                name: 'Fan de Star Wars',
+                color: 0x2ecc71,
+                dialog: '¡Que la fuerza te acompañe! He visto todas las películas al menos 20 veces. Mi sable de luz es réplica exacta de la película. ⭐'
+            },
+            {
+                x: 15, z: 15,
+                name: 'Organizador del Evento',
+                color: 0x34495e,
+                dialog: 'Gracias por venir a nuestra comiccon. Tenemos más de 2000 asistentes este año. ¡Espero que disfrutes todos los stands y actividades! 🎪'
+            },
+            {
+                x: 3, z: 17,
+                name: 'Streamer de Twitch',
+                color: 0xff6b9d,
+                dialog: '¡Estoy haciendo stream en vivo desde la comiccon! Tengo 50k seguidores. Si me ayudas a encontrar contenido interesante, te doy un shoutout. 📱'
+            },
+            {
+                x: 20, z: 17,
+                name: 'Fan de DC Comics',
+                color: 0x95a5a6,
+                dialog: 'Batman es el mejor superhéroe, punto. No tiene superpoderes pero aún así salva el mundo. ¡Eso es lo que lo hace especial! 🦇'
+            }
+        ];
+
+        // Inicializar Three.js
+        function init() {
+            // Crear escena
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87ceeb);
+            scene.fog = new THREE.Fog(0x87ceeb, 50, 150);
+
+            // Crear cámara
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(5 * TILE_SIZE, PLAYER_HEIGHT, 5 * TILE_SIZE);
+
+            // Crear renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('gameContainer').appendChild(renderer.domElement);
+
+            // Controles de cámara con PointerLock
+            controls = new PointerLockControls(camera, renderer.domElement);
+
+            renderer.domElement.addEventListener('click', () => {
+                if (!game.dialogActive) {
+                    controls.lock();
+                }
+            });
+
+            controls.addEventListener('lock', () => {
+                document.getElementById('instructions').style.display = 'none';
+            });
+
+            controls.addEventListener('unlock', () => {
+                document.getElementById('instructions').style.display = 'block';
+            });
+
+            scene.add(controls.getObject());
+
+            // Iluminación
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(50, 100, 50);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.camera.left = -100;
+            directionalLight.shadow.camera.right = 100;
+            directionalLight.shadow.camera.top = 100;
+            directionalLight.shadow.camera.bottom = -100;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+
+            // Luz adicional para ambiente de comiccon
+            const pointLight1 = new THREE.PointLight(0xff6b6b, 1, 50);
+            pointLight1.position.set(50, 10, 30);
+            scene.add(pointLight1);
+
+            const pointLight2 = new THREE.PointLight(0x6b76ff, 1, 50);
+            pointLight2.position.set(20, 10, 60);
+            scene.add(pointLight2);
+
+            // Crear el mundo
+            createWorld();
+
+            // Crear NPCs
+            createNPCs();
+
+            // Variables de jugador
+            playerVelocity = new THREE.Vector3();
+            playerDirection = new THREE.Vector3();
+
+            // Raycaster para detección
+            raycaster = new THREE.Raycaster();
+
+            // Clock para delta time
+            clock = new THREE.Clock();
+
+            // Event listeners
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            window.addEventListener('resize', onWindowResize);
+
+            // Ocultar loading
+            document.getElementById('loading').style.display = 'none';
+
+            console.log('🎮 Comiccon Adventure 3D - ¡Listo para jugar!');
+        }
+
+        // Crear el mundo 3D
+        function createWorld() {
+            // Crear piso base
+            const floorGeometry = new THREE.PlaneGeometry(
+                worldMap[0].length * TILE_SIZE,
+                worldMap.length * TILE_SIZE
+            );
+            const floorMaterial = new THREE.MeshStandardMaterial({
+                color: 0x1a1a2e,
+                roughness: 0.9
+            });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.set(
+                (worldMap[0].length * TILE_SIZE) / 2,
+                0,
+                (worldMap.length * TILE_SIZE) / 2
+            );
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Crear tiles del mapa
+            for (let row = 0; row < worldMap.length; row++) {
+                for (let col = 0; col < worldMap[row].length; col++) {
+                    const tile = worldMap[row][col];
+                    const x = col * TILE_SIZE + TILE_SIZE / 2;
+                    const z = row * TILE_SIZE + TILE_SIZE / 2;
+
+                    if (tile === 1) {
+                        // Pared
+                        const geometry = new THREE.BoxGeometry(TILE_SIZE, WALL_HEIGHT, TILE_SIZE);
+                        const mesh = new THREE.Mesh(geometry, tileMaterials[1]);
+                        mesh.position.set(x, WALL_HEIGHT / 2, z);
+                        mesh.castShadow = true;
+                        mesh.receiveShadow = true;
+                        scene.add(mesh);
+                        game.collisionObjects.push(mesh);
+                    } else if (tile === 2) {
+                        // Stand (más bajo que pared)
+                        const geometry = new THREE.BoxGeometry(TILE_SIZE, 3, TILE_SIZE);
+                        const mesh = new THREE.Mesh(geometry, tileMaterials[2]);
+                        mesh.position.set(x, 1.5, z);
+                        mesh.castShadow = true;
+                        mesh.receiveShadow = true;
+                        scene.add(mesh);
+                        game.collisionObjects.push(mesh);
+                    } else if (tile === 3) {
+                        // Escenario (plataforma elevada)
+                        const geometry = new THREE.BoxGeometry(TILE_SIZE, 1, TILE_SIZE);
+                        const mesh = new THREE.Mesh(geometry, tileMaterials[3]);
+                        mesh.position.set(x, 0.5, z);
+                        mesh.castShadow = true;
+                        mesh.receiveShadow = true;
+                        scene.add(mesh);
+                    } else if (tile === 4) {
+                        // Mesa
+                        const geometry = new THREE.BoxGeometry(TILE_SIZE * 0.8, 2, TILE_SIZE * 0.8);
+                        const mesh = new THREE.Mesh(geometry, tileMaterials[4]);
+                        mesh.position.set(x, 1, z);
+                        mesh.castShadow = true;
+                        mesh.receiveShadow = true;
+                        scene.add(mesh);
+                        game.collisionObjects.push(mesh);
+                    }
+
+                    // Piso decorativo para todas las celdas
+                    if (tile !== 1) {
+                        const floorTileGeometry = new THREE.PlaneGeometry(TILE_SIZE * 0.95, TILE_SIZE * 0.95);
+                        const floorTileMesh = new THREE.Mesh(floorTileGeometry, tileMaterials[0]);
+                        floorTileMesh.rotation.x = -Math.PI / 2;
+                        floorTileMesh.position.set(x, 0.01, z);
+                        floorTileMesh.receiveShadow = true;
+                        scene.add(floorTileMesh);
+                    }
+                }
+            }
+        }
+
+        // Crear NPCs en 3D
+        function createNPCs() {
+            npcData.forEach(npcInfo => {
+                const x = npcInfo.x * TILE_SIZE + TILE_SIZE / 2;
+                const z = npcInfo.z * TILE_SIZE + TILE_SIZE / 2;
+
+                // Grupo para el NPC
+                const npcGroup = new THREE.Group();
+
+                // Cuerpo (esfera principal)
+                const bodyGeometry = new THREE.SphereGeometry(0.8, 32, 32);
+                const bodyMaterial = new THREE.MeshStandardMaterial({
+                    color: npcInfo.color,
+                    roughness: 0.5,
+                    metalness: 0.3
+                });
+                const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                body.position.y = 2;
+                body.castShadow = true;
+                npcGroup.add(body);
+
+                // Cabeza (esfera más pequeña)
+                const headGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+                const headMaterial = new THREE.MeshStandardMaterial({
+                    color: npcInfo.color,
+                    roughness: 0.4
+                });
+                const head = new THREE.Mesh(headGeometry, headMaterial);
+                head.position.y = 3.2;
+                head.castShadow = true;
+                npcGroup.add(head);
+
+                // Ojos
+                const eyeGeometry = new THREE.SphereGeometry(0.1, 16, 16);
+                const eyeMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+
+                const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+                leftEye.position.set(-0.2, 3.3, 0.4);
+                npcGroup.add(leftEye);
+
+                const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+                rightEye.position.set(0.2, 3.3, 0.4);
+                npcGroup.add(rightEye);
+
+                // Pupilas
+                const pupilGeometry = new THREE.SphereGeometry(0.05, 16, 16);
+                const pupilMaterial = new THREE.MeshStandardMaterial({ color: 0x000000 });
+
+                const leftPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+                leftPupil.position.set(-0.2, 3.3, 0.5);
+                npcGroup.add(leftPupil);
+
+                const rightPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+                rightPupil.position.set(0.2, 3.3, 0.5);
+                npcGroup.add(rightPupil);
+
+                // Base/sombra
+                const baseGeometry = new THREE.CylinderGeometry(0.6, 0.8, 1, 32);
+                const baseMaterial = new THREE.MeshStandardMaterial({
+                    color: npcInfo.color,
+                    roughness: 0.7
+                });
+                const base = new THREE.Mesh(baseGeometry, baseMaterial);
+                base.position.y = 0.5;
+                base.castShadow = true;
+                npcGroup.add(base);
+
+                // Indicador flotante
+                const indicatorGeometry = new THREE.SphereGeometry(0.2, 16, 16);
+                const indicatorMaterial = new THREE.MeshStandardMaterial({
+                    color: 0xffffff,
+                    emissive: 0xffffff,
+                    emissiveIntensity: 0.5
+                });
+                const indicator = new THREE.Mesh(indicatorGeometry, indicatorMaterial);
+                indicator.position.y = 4.5;
+                indicator.visible = false;
+                npcGroup.add(indicator);
+
+                npcGroup.position.set(x, 0, z);
+                scene.add(npcGroup);
+
+                game.npcMeshes.push({
+                    mesh: npcGroup,
+                    indicator: indicator,
+                    data: npcInfo
+                });
+            });
+        }
+
+        // Input handlers
+        function onKeyDown(event) {
+            game.keys[event.key.toLowerCase()] = true;
+
+            if (event.key.toLowerCase() === 'e') {
+                if (game.dialogActive) {
+                    closeDialog();
+                } else {
+                    checkNPCInteraction();
+                }
+            }
+        }
+
+        function onKeyUp(event) {
+            game.keys[event.key.toLowerCase()] = false;
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Actualizar movimiento del jugador
+        function updatePlayer(deltaTime) {
+            if (game.dialogActive || !controls.isLocked) return;
+
+            const speed = game.keys['shift'] ? PLAYER_RUN_SPEED : PLAYER_SPEED;
+
+            playerVelocity.x = 0;
+            playerVelocity.z = 0;
+
+            playerDirection.z = Number(game.keys['w'] || game.keys['arrowup']) -
+                               Number(game.keys['s'] || game.keys['arrowdown']);
+            playerDirection.x = Number(game.keys['d'] || game.keys['arrowright']) -
+                               Number(game.keys['a'] || game.keys['arrowleft']);
+            playerDirection.normalize();
+
+            if (game.keys['w'] || game.keys['arrowup']) {
+                playerVelocity.add(getForwardVector().multiplyScalar(speed * deltaTime));
+            }
+            if (game.keys['s'] || game.keys['arrowdown']) {
+                playerVelocity.add(getForwardVector().multiplyScalar(-speed * deltaTime));
+            }
+            if (game.keys['a'] || game.keys['arrowleft']) {
+                playerVelocity.add(getSideVector().multiplyScalar(-speed * deltaTime));
+            }
+            if (game.keys['d'] || game.keys['arrowright']) {
+                playerVelocity.add(getSideVector().multiplyScalar(speed * deltaTime));
+            }
+
+            // Guardar posición anterior
+            const oldPosition = controls.getObject().position.clone();
+
+            // Aplicar movimiento
+            controls.getObject().position.add(playerVelocity);
+
+            // Verificar colisiones
+            if (checkCollisions()) {
+                controls.getObject().position.copy(oldPosition);
+            }
+
+            // Actualizar indicadores de NPCs
+            updateNPCIndicators();
+        }
+
+        function getForwardVector() {
+            camera.getWorldDirection(playerDirection);
+            playerDirection.y = 0;
+            playerDirection.normalize();
+            return playerDirection;
+        }
+
+        function getSideVector() {
+            camera.getWorldDirection(playerDirection);
+            playerDirection.y = 0;
+            playerDirection.normalize();
+            playerDirection.cross(camera.up);
+            return playerDirection;
+        }
+
+        // Verificar colisiones
+        function checkCollisions() {
+            const playerPosition = controls.getObject().position;
+            const playerBox = new THREE.Box3(
+                new THREE.Vector3(
+                    playerPosition.x - 1,
+                    playerPosition.y - PLAYER_HEIGHT,
+                    playerPosition.z - 1
+                ),
+                new THREE.Vector3(
+                    playerPosition.x + 1,
+                    playerPosition.y + PLAYER_HEIGHT,
+                    playerPosition.z + 1
+                )
+            );
+
+            for (let obj of game.collisionObjects) {
+                const objBox = new THREE.Box3().setFromObject(obj);
+                if (playerBox.intersectsBox(objBox)) {
+                    return true;
+                }
+            }
+
+            // Verificar colisiones con NPCs
+            for (let npc of game.npcMeshes) {
+                const npcBox = new THREE.Box3().setFromObject(npc.mesh);
+                if (playerBox.intersectsBox(npcBox)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Actualizar indicadores de NPCs
+        function updateNPCIndicators() {
+            const playerPosition = controls.getObject().position;
+
+            game.npcMeshes.forEach(npc => {
+                const distance = playerPosition.distanceTo(npc.mesh.position);
+
+                if (distance < 8) {
+                    npc.indicator.visible = true;
+                    // Animación de flotación
+                    npc.indicator.position.y = 4.5 + Math.sin(Date.now() / 300) * 0.3;
+                } else {
+                    npc.indicator.visible = false;
+                }
+
+                // Hacer que los NPCs miren al jugador cuando están cerca
+                if (distance < 10) {
+                    npc.mesh.lookAt(playerPosition.x, npc.mesh.position.y, playerPosition.z);
+                }
+            });
+        }
+
+        // Verificar interacción con NPCs
+        function checkNPCInteraction() {
+            const playerPosition = controls.getObject().position;
+
+            for (let npc of game.npcMeshes) {
+                const distance = playerPosition.distanceTo(npc.mesh.position);
+
+                if (distance < 8) {
+                    showDialog(npc.data);
+                    return;
+                }
+            }
+        }
+
+        // Mostrar diálogo
+        function showDialog(npcData) {
+            game.dialogActive = true;
+            controls.unlock();
+
+            const dialogBox = document.getElementById('dialogBox');
+            const npcName = document.getElementById('npcName');
+            const dialogText = document.getElementById('dialogText');
+
+            npcName.textContent = npcData.name;
+            dialogText.textContent = npcData.dialog;
+            dialogBox.classList.add('active');
+        }
+
+        // Cerrar diálogo
+        function closeDialog() {
+            game.dialogActive = false;
+            const dialogBox = document.getElementById('dialogBox');
+            dialogBox.classList.remove('active');
+        }
+
+        // Loop principal
+        function animate() {
+            requestAnimationFrame(animate);
+
+            delta = clock.getDelta();
+            updatePlayer(delta);
+
+            renderer.render(scene, camera);
+        }
+
+        // Iniciar el juego
+        init();
+        animate();
+    </script>
+</body>
+</html>
