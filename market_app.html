@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Predictor AI - Predicción de Mercados Financieros</title>
+    <link rel="stylesheet" href="market_styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <h1>Market Predictor AI</h1>
+                </div>
+                <nav class="nav">
+                    <button class="nav-btn active" data-section="dashboard">Dashboard</button>
+                    <button class="nav-btn" data-section="analysis">Análisis</button>
+                    <button class="nav-btn" data-section="compare">Comparar</button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="section active">
+                <div class="hero">
+                    <h2 class="hero-title">Predicciones Inteligentes del Mercado</h2>
+                    <p class="hero-subtitle">Análisis avanzado con Machine Learning y análisis técnico para acciones y criptomonedas</p>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="stats-grid" id="quickStats">
+                    <div class="stat-card loading">
+                        <div class="stat-icon">📈</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Cargando...</div>
+                            <div class="stat-value">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Popular Symbols -->
+                <div class="symbols-section">
+                    <h3 class="section-title">Símbolos Populares</h3>
+                    <div class="tabs">
+                        <button class="tab-btn active" data-tab="stocks">Acciones</button>
+                        <button class="tab-btn" data-tab="crypto">Criptomonedas</button>
+                    </div>
+                    <div class="symbols-grid">
+                        <div id="stocks-list" class="symbols-list active"></div>
+                        <div id="crypto-list" class="symbols-list"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Analysis Section -->
+            <section id="analysis" class="section">
+                <h2 class="section-title">Análisis Detallado</h2>
+
+                <!-- Search -->
+                <div class="search-box">
+                    <input type="text" id="symbolInput" placeholder="Ingresa un símbolo (ej: AAPL, BTC-USD)" class="search-input">
+                    <select id="periodSelect" class="period-select">
+                        <option value="1mo">1 Mes</option>
+                        <option value="3mo">3 Meses</option>
+                        <option value="6mo" selected>6 Meses</option>
+                        <option value="1y">1 Año</option>
+                        <option value="2y">2 Años</option>
+                    </select>
+                    <button id="analyzeBtn" class="btn btn-primary">Analizar</button>
+                </div>
+
+                <!-- Results -->
+                <div id="analysisResults" class="analysis-results"></div>
+            </section>
+
+            <!-- Compare Section -->
+            <section id="compare" class="section">
+                <h2 class="section-title">Comparar Símbolos</h2>
+
+                <div class="compare-box">
+                    <input type="text" id="compareInput" placeholder="Ingresa símbolos separados por comas (ej: AAPL, MSFT, GOOGL)" class="search-input">
+                    <button id="compareBtn" class="btn btn-primary">Comparar</button>
+                </div>
+
+                <div id="compareResults" class="compare-results"></div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 Market Predictor AI. Todos los derechos reservados.</p>
+            <p class="disclaimer">Advertencia: Las predicciones son solo para fines informativos. No constituyen asesoramiento financiero.</p>
+        </div>
+    </footer>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p>Analizando mercado...</p>
+    </div>
+
+    <script src="market_app.js"></script>
+</body>
+</html>
