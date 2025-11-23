@@ -1,4 +1,39 @@
-# Minesweeper Game
+# Prueba Repository
+
+Este repositorio contiene dos proyectos increíbles:
+
+## 🚀 Market Predictor AI
+
+**Una aplicación avanzada de predicción de mercados financieros con Machine Learning y Análisis Técnico**
+
+Aplicación completa para predecir el comportamiento de acciones y criptomonedas usando modelos de Machine Learning (Random Forest, Gradient Boosting) y más de 30 indicadores técnicos.
+
+### Características Principales
+- 📊 Análisis técnico completo (RSI, MACD, Bollinger Bands, etc.)
+- 🤖 Predicciones con Machine Learning
+- 📈 Proyecciones a 7 días
+- 💹 Señales de trading automáticas
+- 🌐 Interfaz web moderna y responsiva
+- 🔄 Datos en tiempo real de Yahoo Finance
+
+### Quick Start
+```bash
+# Linux/Mac
+./start.sh
+
+# Windows
+start.bat
+
+# O manualmente
+pip install -r requirements.txt
+python app.py
+```
+
+📖 **[Ver documentación completa](MARKET_PREDICTOR_README.md)**
+
+---
+
+## 🎮 Minesweeper Game
 
 A classic Minesweeper game built with HTML, CSS, and JavaScript. Play the timeless puzzle game right in your browser!
 
