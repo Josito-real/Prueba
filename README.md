@@ -1,6 +1,6 @@
 # Prueba Repository
 
-Este repositorio contiene dos proyectos increíbles:
+Este repositorio contiene tres proyectos:
 
 ## 🚀 Market Predictor AI
 
@@ -120,6 +120,43 @@ Feel free to use and modify this code for your own projects!
 ## Contributing
 
 Contributions are welcome! Feel free to submit issues or pull requests.
+
+---
+
+## 🗂️ Krill Planner
+
+**Internal project-planning prototype for Krill Energy C.A.** — a department-facing tool for engineers and leadership.
+
+Designed in [Claude Design](https://claude.ai/design) and handed off as an HTML/React prototype. Lives under [`krill_planner/`](krill_planner/).
+
+### Features
+
+- **Command rail** — navy spine of project glyphs that hover-expands into full navigation
+- **Today time-strip** — horizontal day timeline with focus, meeting, and review blocks (+ Classic and Focus variants)
+- **Roadmap** with quarter lanes, capacity heat band, and dashed cross-project dependency threads
+- Project detail (Overview / Tasks / Timeline / Docs / Activity), Kanban, List, Table, Calendar, Capacity, Exec status, Inbox
+- **Mobile** companion view in an iOS frame
+- **⌘K command palette**
+- **Tweaks panel**: accent color (5 presets), density (compact / comfortable / spacious), hero variant (Strip / Classic / Focus), mobile toggle
+
+### Running it
+
+The app loads React 18 and Babel from unpkg and uses relative `./src/*.jsx` scripts, so it **must be served over HTTP** (opening the file directly will hit CORS errors):
+
+```bash
+# from the repo root
+python3 -m http.server 8000
+# then visit http://localhost:8000/krill_planner/
+```
+
+Requires internet for CDN fonts and React. State (last view, active project) is persisted in `localStorage` under `krill.view` / `krill.project`.
+
+### Files
+
+- `krill_planner/index.html` — entry point
+- `krill_planner/src/` — React components (data, icons, UI primitives, shell, views, mobile, tweaks, app)
+- `krill_planner/Krill Planner-print.html` — print-ready landscape version (use "Save as PDF", margins: None, enable Background graphics)
+- `krill_planner/design-source/` — original Claude Design handoff README and chat transcript
 
 ---
 

@@ -1,0 +1,951 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Krill Planner — Print</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --navy-950:#060e1f; --navy-900:#0a1830; --navy-800:#0f2142; --navy-700:#172c55;
+    --navy-600:#23406e; --navy-500:#3a5a8a; --navy-400:#6a83a8; --navy-300:#9fb1cd;
+    --navy-200:#c9d4e4; --navy-100:#e7ecf4; --navy-050:#f3f5fa;
+    --paper:#fafaf8; --paper-2:#f2f2ee;
+    --ink:#0b1220; --ink-2:#38465e; --ink-3:#6a7691; --ink-4:#98a2b6;
+    --line:#e4e6ec; --line-2:#edeef3;
+    --accent:#1E5BEF; --accent-2:#4FD0E7;
+    --accent-ink:#0a2a8a; --accent-wash: color-mix(in oklab, var(--accent) 10%, white);
+    --ok:#1f9d55; --warn:#c08a2a; --risk:#c0452a;
+    --row-h:40px; --pad-y:10px; --pad-x:14px; --radius:10px; --radius-sm:6px;
+    --font-sans:'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --font-mono:'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    --font-serif:'Fraunces', ui-serif, Georgia, serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#e4e6ec;color:var(--ink);font-family:var(--font-sans);-webkit-font-smoothing:antialiased;}
+  a{color:inherit;text-decoration:none}
+
+  .page{
+    width: 1400px; height: 900px;
+    background: var(--paper);
+    margin: 24px auto;
+    padding: 0;
+    box-shadow: 0 8px 24px rgba(6,14,31,.08);
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+    break-after: page;
+    display: flex;
+    flex-direction: column;
+  }
+  .page:last-child{page-break-after:auto;break-after:auto}
+
+  .ph{
+    padding:18px 28px 14px; display:flex; align-items:flex-end; justify-content:space-between;
+    border-bottom:1px solid var(--line); flex:none;
+  }
+  .ph h1{margin:0; font-family:var(--font-serif); font-weight:500; font-size:28px; letter-spacing:-0.01em}
+  .ph .eye{font-size:11px; color:var(--ink-3); letter-spacing:.06em; text-transform:uppercase; font-weight:600}
+  .ph .meta{font-size:11px; color:var(--ink-3); font-family:var(--font-mono)}
+  .ph .brand{display:flex;align-items:center;gap:10px}
+  .ph .brand-name{font-size:12px;font-weight:600;color:var(--ink-2)}
+  .body{flex:1; padding:18px 28px; overflow:hidden; display:flex; flex-direction:column; gap:14px}
+
+  .card{background:var(--paper); border:1px solid var(--line); border-radius:var(--radius); padding:14px}
+  .card-title{font-size:11px;font-weight:600;color:var(--ink-2);letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px}
+  .mono{font-family:var(--font-mono)}
+  .serif{font-family:var(--font-serif); font-weight:500; letter-spacing:-0.01em}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);font-size:11px;color:var(--ink-3);font-weight:500;white-space:nowrap}
+  .dot{width:6px;height:6px;border-radius:6px;display:inline-block;vertical-align:middle}
+  .grid-2{display:grid;grid-template-columns:1.4fr 1fr;gap:14px}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .row{display:flex;align-items:center;gap:10px}
+  .bar{height:4px;background:var(--line-2);border-radius:4px;overflow:hidden}
+  .bar > span{display:block;height:100%;background:var(--accent);border-radius:4px}
+  .avatar{width:22px;height:22px;border-radius:22px;color:white;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex:none}
+  .orb{width:14px;height:14px;border-radius:14px;border:1.5px solid var(--line);position:relative;flex:none;background:conic-gradient(var(--accent) calc(var(--p,60) * 1%), transparent 0)}
+
+  /* Today strip */
+  .strip{height:130px;position:relative;padding:10px 16px;background:var(--paper);border:1px solid var(--line);border-radius:10px}
+
+  /* Roadmap table */
+  table.rm{width:100%;border-collapse:collapse;font-size:11.5px}
+  table.rm th, table.rm td{padding:6px 8px;border-bottom:1px solid var(--line-2);text-align:left;vertical-align:middle}
+  table.rm th{font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em;font-weight:600;background:var(--paper-2)}
+
+  /* stat tiles */
+  .stat{border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--paper)}
+  .stat .n{font-family:var(--font-serif);font-weight:500;font-size:34px;letter-spacing:-0.02em;margin-top:4px}
+
+  /* TOC */
+  .toc{padding:48px 72px;display:flex;flex-direction:column;gap:14px;height:100%;background:var(--paper)}
+  .toc h1{font-family:var(--font-serif);font-weight:500;font-size:48px;letter-spacing:-0.02em;margin:0}
+  .toc .sub{font-size:14px;color:var(--ink-3);max-width:680px;text-wrap:pretty;line-height:1.55}
+  .toc ol{margin:24px 0 0;padding:0;list-style:none;columns:2;column-gap:40px}
+  .toc ol li{padding:10px 0;border-bottom:1px solid var(--line-2);display:flex;gap:12px;align-items:baseline;break-inside:avoid}
+  .toc ol li .num{font-family:var(--font-mono);font-size:11px;color:var(--ink-4);width:24px}
+  .toc ol li .t{flex:1;font-size:15px;font-weight:500}
+  .toc ol li .d{font-size:12px;color:var(--ink-3)}
+
+  .cover{
+    position:relative; height:100%;
+    background: linear-gradient(140deg, var(--navy-950) 0%, var(--navy-800) 50%, var(--navy-700) 100%);
+    color:white; padding:72px; display:flex; flex-direction:column; justify-content:space-between;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  .cover::before{
+    content:''; position:absolute; inset:0;
+    background: radial-gradient(ellipse at 90% 20%, color-mix(in oklab, var(--accent-2) 40%, transparent), transparent 55%),
+                radial-gradient(ellipse at 10% 100%, color-mix(in oklab, var(--accent) 30%, transparent), transparent 55%);
+    opacity:.7; pointer-events:none;
+  }
+  .cover *{position:relative}
+  .cover .tag{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--navy-300);font-weight:600}
+  .cover h1{font-family:var(--font-serif);font-weight:500;font-size:88px;line-height:1;letter-spacing:-0.03em;margin:18px 0 0}
+  .cover .lead{font-size:18px;color:var(--navy-200);max-width:720px;margin-top:22px;line-height:1.55}
+  .cover .footline{display:flex;justify-content:space-between;align-items:flex-end;font-size:12px;color:var(--navy-300);font-family:var(--font-mono)}
+
+  /* PRINT RULES */
+  @page { size: 1400px 900px; margin: 0; }
+  @media print {
+    html,body{background:white}
+    .page{margin:0;box-shadow:none;width:1400px;height:900px}
+    body{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+
+<!-- 1. COVER -->
+<section class="page">
+  <div class="cover">
+    <div>
+      <div class="tag">Krill Energy · Engineering &amp; Ops</div>
+      <h1>Krill<br/>Planner</h1>
+      <div class="lead">An internal planning surface for our department — hero "Today" view, portfolio roadmap with cross-project dependency threads, capacity heatmap, leadership status, and a mobile companion for field crews.</div>
+    </div>
+    <div>
+      <svg width="88" height="88" viewBox="0 0 24 24"><defs><linearGradient id="kg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#4FD0E7"/><stop offset="1" stop-color="#1E5BEF"/></linearGradient></defs><circle cx="12" cy="12" r="10.5" fill="url(#kg)"/><path d="M7.5 12a4.5 4.5 0 1 1 4.5 4.5" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.6" fill="white"/></svg>
+      <div class="footline" style="margin-top:20px">
+        <span>Week 16 · April 17, 2026</span>
+        <span>Hi-fi prototype · v1</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 2. TOC -->
+<section class="page">
+  <div class="toc">
+    <div class="tag" style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600">Contents</div>
+    <h1>What's inside</h1>
+    <div class="sub">Eleven screens across the app. Start with Today, drop into a project, zoom out to the portfolio roadmap, and end on the leadership status report.</div>
+    <ol>
+      <li><span class="num">01</span><span class="t">Cover</span></li>
+      <li><span class="num">02</span><span class="t">Contents</span></li>
+      <li><span class="num">03</span><span class="t">Today · Agenda (hero)</span><span class="d">personal workday</span></li>
+      <li><span class="num">04</span><span class="t">Today · Time strip</span><span class="d">novel variant</span></li>
+      <li><span class="num">05</span><span class="t">Project detail · SE-07</span><span class="d">at-risk sample</span></li>
+      <li><span class="num">06</span><span class="t">Roadmap 2026</span><span class="d">portfolio view</span></li>
+      <li><span class="num">07</span><span class="t">Board · Sprint 16</span><span class="d">kanban</span></li>
+      <li><span class="num">08</span><span class="t">Capacity</span><span class="d">resource allocation</span></li>
+      <li><span class="num">09</span><span class="t">Projects list</span><span class="d">all projects</span></li>
+      <li><span class="num">10</span><span class="t">Exec status</span><span class="d">for leadership</span></li>
+      <li><span class="num">11</span><span class="t">Mobile companion</span><span class="d">field view</span></li>
+    </ol>
+  </div>
+</section>
+
+<!-- 3. TODAY (agenda / classic variant) -->
+<section class="page" id="today-agenda">
+  <div class="ph">
+    <div>
+      <div class="eye">Friday · April 17 · Week 16</div>
+      <h1>Morning, Andrea.</h1>
+    </div>
+    <div class="brand"><svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="#1E5BEF"/><path d="M7.5 12a4.5 4.5 0 1 1 4.5 4.5" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.6" fill="white"/></svg><span class="brand-name">Krill Planner · Today</span><span class="meta">03 / 11</span></div>
+  </div>
+  <div class="body">
+    <div class="grid-4">
+      <div class="stat"><div style="font-size:11px;color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase;font-weight:600">Active projects</div><div class="n">6</div></div>
+      <div class="stat"><div style="font-size:11px;color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase;font-weight:600">Open tasks</div><div class="n">11</div></div>
+      <div class="stat"><div style="font-size:11px;color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase;font-weight:600">At risk</div><div class="n" style="color:var(--warn)">2</div></div>
+      <div class="stat"><div style="font-size:11px;color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase;font-weight:600">Blocked</div><div class="n" style="color:var(--risk)">1</div></div>
+    </div>
+    <div class="grid-2" style="flex:1">
+      <div class="card">
+        <div class="card-title">Agenda</div>
+        <div id="agenda-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Needs attention</div>
+        <div id="risks"></div>
+        <div class="card-title" style="margin-top:14px">Inbox</div>
+        <div id="inbox"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. TODAY STRIP variant -->
+<section class="page" id="today-strip">
+  <div class="ph">
+    <div>
+      <div class="eye">Today · time-strip variant</div>
+      <h1>Your day at a glance.</h1>
+    </div>
+    <div class="brand"><span class="meta">04 / 11</span></div>
+  </div>
+  <div class="body">
+    <div class="card">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px">
+        <div>
+          <div style="font-size:11px;color:var(--ink-3);letter-spacing:.05em;text-transform:uppercase;font-weight:600">Your day — Fri Apr 17</div>
+          <div class="serif" style="font-size:20px">2 deep-focus blocks. 3 meetings. 1 drifting deadline.</div>
+        </div>
+        <div class="mono" style="font-size:11px;color:var(--accent);font-weight:600">NOW · 3:15p</div>
+      </div>
+      <svg id="strip-svg" viewBox="0 0 1300 140" style="width:100%;height:140px;display:block"></svg>
+    </div>
+
+    <div class="grid-2" style="flex:1">
+      <div class="card">
+        <div class="card-title">Pulled into today</div>
+        <div id="pulled"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">OKRs · Q2</div>
+        <div id="okrs"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. PROJECT DETAIL — SE-07 -->
+<section class="page" id="project-detail">
+  <div class="ph">
+    <div>
+      <div class="eye">Project detail · at-risk</div>
+      <h1>Substation SE-07 Retrofit</h1>
+    </div>
+    <div class="brand"><span class="meta">05 / 11</span></div>
+  </div>
+  <div class="body">
+    <div style="display:flex;align-items:center;gap:16px;padding:16px;background:linear-gradient(135deg, oklch(0.94 0.03 225), var(--paper));border:1px solid var(--line);border-radius:10px">
+      <div style="width:46px;height:46px;border-radius:10px;background:oklch(0.55 0.14 225);color:white;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:600">GRD</div>
+      <div style="flex:1">
+        <div class="row" style="gap:8px;margin-bottom:4px">
+          <span class="mono" style="font-size:11px;color:var(--ink-3)">GRD-22</span>
+          <span class="pill"><span class="dot" style="background:var(--warn)"></span>At risk</span>
+          <span class="pill">Grid</span>
+          <span class="pill">Q2</span>
+        </div>
+        <div class="serif" style="font-size:22px">Replace legacy protection relays, add SCADA telemetry.</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase;font-weight:600">Progress</div>
+        <div style="font-family:var(--font-serif);font-size:30px;font-weight:600">31%</div>
+        <div class="mono" style="font-size:10px;color:var(--ink-3)">2026-01-20 → 2026-06-15</div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="flex:1">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card">
+          <div class="card-title">Milestones &amp; KRs</div>
+          <div id="krs"></div>
+        </div>
+        <div class="card" style="background:color-mix(in oklab, var(--risk) 6%, white);border-color:color-mix(in oklab, var(--risk) 30%, var(--line))">
+          <div class="card-title" style="color:var(--risk)">Blockers</div>
+          <div style="font-size:13px">Waiting on ABB relay shipment — ETA slipped 3 weeks. Escalated to procurement Apr 15.</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Open tasks · 4</div>
+          <div id="proj-tasks"></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card">
+          <div class="card-title">Team &amp; load</div>
+          <div id="team"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Dependencies</div>
+          <div id="deps"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. ROADMAP -->
+<section class="page" id="roadmap">
+  <div class="ph">
+    <div>
+      <div class="eye">2026 · company</div>
+      <h1>Roadmap</h1>
+    </div>
+    <div class="brand"><span class="meta">06 / 11</span></div>
+  </div>
+  <div class="body">
+    <div class="card" style="padding:0">
+      <div style="display:flex">
+        <div style="width:220px;border-right:1px solid var(--line);flex:none">
+          <div style="height:44px;border-bottom:1px solid var(--line);padding:0 14px;display:flex;align-items:center;font-size:10px;color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase;font-weight:600">Project</div>
+          <div id="rm-rows"></div>
+        </div>
+        <div style="flex:1">
+          <svg id="rm-svg" viewBox="0 0 1060 308" style="width:100%;height:308px;display:block"></svg>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="padding:0">
+      <div style="padding:10px 14px;border-bottom:1px solid var(--line);font-size:10px;color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase;font-weight:600">Capacity heat · by month</div>
+      <div id="heat" style="padding:10px 14px"></div>
+    </div>
+    <div style="display:flex;gap:16px;font-size:11px;color:var(--ink-3)">
+      <span class="row"><span style="width:18px;height:2px;background:var(--risk);display:inline-block"></span> blocks</span>
+      <span class="row"><span style="width:18px;height:2px;background:var(--accent);display:inline-block"></span> feeds</span>
+      <span class="row"><span style="width:18px;height:2px;background:#7a52c0;display:inline-block"></span> enables</span>
+    </div>
+  </div>
+</section>
+
+<!-- 7. KANBAN -->
+<section class="page" id="board">
+  <div class="ph">
+    <div>
+      <div class="eye">Sprint 16 · Apr 14–28</div>
+      <h1>Board</h1>
+    </div>
+    <div class="brand"><span class="meta">07 / 11</span></div>
+  </div>
+  <div class="body">
+    <div id="kanban" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;flex:1"></div>
+  </div>
+</section>
+
+<!-- 8. CAPACITY -->
+<section class="page" id="capacity">
+  <div class="ph">
+    <div>
+      <div class="eye">Week of Apr 14</div>
+      <h1>Capacity</h1>
+    </div>
+    <div class="brand"><span class="meta">08 / 11</span></div>
+  </div>
+  <div class="body">
+    <div class="card" style="padding:0;flex:1;overflow:hidden">
+      <div style="padding:10px 14px;border-bottom:1px solid var(--line);font-size:10px;color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase;font-weight:600;display:flex;align-items:center">
+        Team · load by project <span style="flex:1"></span> <span style="font-family:var(--font-mono);color:var(--ink-4);text-transform:none;letter-spacing:0">100% = full-time</span>
+      </div>
+      <div id="cap-rows" style="padding:8px 14px"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 9. LIST -->
+<section class="page" id="list">
+  <div class="ph">
+    <div>
+      <div class="eye">All projects</div>
+      <h1>Projects list</h1>
+    </div>
+    <div class="brand"><span class="meta">09 / 11</span></div>
+  </div>
+  <div class="body">
+    <div class="card" style="padding:0">
+      <table class="rm" id="projects-table">
+        <thead><tr><th></th><th>Code</th><th>Project</th><th>Status</th><th>Owner</th><th>Q</th><th>Team</th><th style="text-align:right">Progress</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- 10. EXEC -->
+<section class="page" id="exec">
+  <div class="ph">
+    <div>
+      <div class="eye">Week 16 · for leadership</div>
+      <h1>Exec status</h1>
+    </div>
+    <div class="brand"><span class="meta">10 / 11</span></div>
+  </div>
+  <div class="body">
+    <div class="grid-4">
+      <div class="stat"><div style="font-size:11px;color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase;font-weight:600">Active projects</div><div class="n">6</div></div>
+      <div class="stat"><div style="font-size:11px;color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase;font-weight:600">Avg progress</div><div class="n" style="color:var(--accent)">62%</div></div>
+      <div class="stat"><div style="font-size:11px;color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase;font-weight:600">At risk</div><div class="n" style="color:var(--warn)">2</div></div>
+      <div class="stat"><div style="font-size:11px;color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase;font-weight:600">Blocked</div><div class="n" style="color:var(--risk)">1</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Narrative</div>
+      <div style="font-size:13.5px;line-height:1.6;color:var(--ink-2);max-width:920px;text-wrap:pretty">
+        <p style="margin:0 0 10px">The Grid team held the SE-07 cutover window this week despite the ABB relay shipment slipping three weeks. Andrea has drafted runbook v3 and we're on track to hit the Q2 milestone if procurement resolves the delay by Apr 24. <b>This is the single biggest schedule risk in the portfolio.</b></p>
+        <p style="margin:0 0 10px">Harvey IA v2 is at risk — the MAPE regression on cohort B is under review by Valentina and Lucía. We still expect Q2 shadow deploy, but confidence is medium.</p>
+        <p style="margin:0">Residential rollout in Maracaibo is 78% complete and ahead of plan; we'll likely beat the 4,000-meter target by two weeks.</p>
+      </div>
+    </div>
+    <div class="card" style="padding:0;flex:1">
+      <div style="padding:10px 14px;border-bottom:1px solid var(--line);font-size:10px;color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase;font-weight:600">Per-project health</div>
+      <div id="exec-rows"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 11. MOBILE -->
+<section class="page" id="mobile">
+  <div class="ph">
+    <div>
+      <div class="eye">On the go</div>
+      <h1>Mobile companion</h1>
+    </div>
+    <div class="brand"><span class="meta">11 / 11</span></div>
+  </div>
+  <div class="body" style="background:radial-gradient(ellipse at top, var(--navy-100), var(--paper) 60%);align-items:center;justify-content:center;flex-direction:row;gap:60px">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+      <div class="phone" id="phone-today"></div>
+      <div style="font-size:12px;color:var(--ink-3)">Today</div>
+    </div>
+    <div style="max-width:380px">
+      <div class="serif" style="font-size:26px">Field-engineer view.</div>
+      <div style="font-size:14px;color:var(--ink-3);margin-top:10px;line-height:1.55;text-wrap:pretty">Check your day, triage incoming blockers, and close tasks from the site. Bottom-tab navigation, large hit targets, optimized for one-handed use.</div>
+      <ul style="margin:18px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2);line-height:1.7">
+        <li>"Now" block with live focus countdown</li>
+        <li>Quick-pull tasks from the inbox</li>
+        <li>Swipe to triage, tap to resolve</li>
+        <li>Offline-ready for site visits</li>
+      </ul>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+      <div class="phone" id="phone-project"></div>
+      <div style="font-size:12px;color:var(--ink-3)">Project detail</div>
+    </div>
+  </div>
+</section>
+
+<script>
+// ——— Data ———
+const PEOPLE = [
+  { id:'p1', name:'Andrea Salas',     role:'Lead Engineer',   init:'AS', load:92 },
+  { id:'p2', name:'Marco Rivas',      role:'Electrical Eng.', init:'MR', load:78 },
+  { id:'p3', name:'Lucía Ortega',     role:'Data Engineer',   init:'LO', load:64 },
+  { id:'p4', name:'Diego Pineda',     role:'Field Lead',      init:'DP', load:105 },
+  { id:'p5', name:'Sofía Benítez',    role:'Project Manager', init:'SB', load:71 },
+  { id:'p6', name:'Rafael Cárdenas',  role:'Control Systems', init:'RC', load:55 },
+  { id:'p7', name:'Valentina Méndez', role:'ML Engineer',     init:'VM', load:82 },
+  { id:'p8', name:'Iván Peralta',     role:'Civil Engineer',  init:'IP', load:48 },
+  { id:'p9', name:'Carla Núñez',      role:'Analyst',         init:'CN', load:66 },
+];
+const PROJECTS = [
+  { id:'PRJ-01', code:'SOL-14', name:'Valencia Solar · Phase II', owner:'p4', status:'active',  health:'on-track', progress:62, q:'Q2–Q3', hue:215, start:0.10, end:0.74, team:['p4','p8','p1','p5'], summary:'Expand Valencia array by 48 MW; tie-in to substation SE-07.'},
+  { id:'PRJ-02', code:'HAR-03', name:'Harvey IA · Load Forecaster v2', owner:'p7', status:'active',  health:'at-risk',  progress:44, q:'Q2',    hue:190, start:0.16, end:0.49, team:['p7','p3','p9'], summary:'Second-gen residential demand forecaster.'},
+  { id:'PRJ-03', code:'GRD-22', name:'Substation SE-07 Retrofit', owner:'p1', status:'at-risk', health:'at-risk',  progress:31, q:'Q2',    hue:225, start:0.05, end:0.45, team:['p1','p6','p5'], summary:'Replace legacy protection relays, add SCADA.'},
+  { id:'PRJ-04', code:'RES-09', name:'Residential Rollout · Maracaibo', owner:'p2', status:'active',  health:'on-track', progress:78, q:'Q1–Q2', hue:200, start:0.02, end:0.38, team:['p2','p9','p5'], summary:'Smart-meter install · 4,200 households.'},
+  { id:'PRJ-05', code:'HAR-04', name:'Harvey IA · Outage Triage', owner:'p3', status:'planning',health:'on-track', progress:8,  q:'Q3',    hue:195, start:0.40, end:0.78, team:['p3','p7','p1'], summary:'LLM-backed triage for field crews.'},
+  { id:'PRJ-06', code:'GRD-25', name:'Grid Frequency Monitor', owner:'p6', status:'blocked', health:'blocked',  progress:22, q:'Q2',    hue:220, start:0.12, end:0.58, team:['p6','p1','p3'], summary:'Deploy 40 PMU sensors across west corridor.'},
+];
+const DEPS = [
+  { from:'PRJ-03', to:'PRJ-01', kind:'blocks' },
+  { from:'PRJ-06', to:'PRJ-02', kind:'feeds'  },
+  { from:'PRJ-02', to:'PRJ-05', kind:'enables'},
+  { from:'PRJ-04', to:'PRJ-02', kind:'feeds'  },
+];
+const TASKS = [
+  { id:'T-301', proj:'PRJ-01', title:'Inverter bank commissioning — string 14–22', owner:'p4', status:'in-progress', prio:'high',  due:'04-22' },
+  { id:'T-303', proj:'PRJ-02', title:'Retrain forecaster on Q1 2026 residential data', owner:'p7', status:'in-progress', prio:'high', due:'04-19' },
+  { id:'T-304', proj:'PRJ-02', title:'Review MAPE regression on cohort B', owner:'p3', status:'review', prio:'high',  due:'04-18' },
+  { id:'T-305', proj:'PRJ-03', title:'Draft cutover runbook v3', owner:'p1', status:'todo', prio:'high',  due:'04-25' },
+  { id:'T-306', proj:'PRJ-03', title:'Escalate ABB shipment with procurement', owner:'p5', status:'blocked', prio:'urgent', due:'04-18' },
+  { id:'T-307', proj:'PRJ-04', title:'Portal: outage notification copy review', owner:'p9', status:'review', prio:'med',   due:'04-20' },
+  { id:'T-308', proj:'PRJ-04', title:'Door-to-door schedule — Zone 3B', owner:'p2', status:'in-progress', prio:'med', due:'04-23' },
+  { id:'T-309', proj:'PRJ-05', title:'Spec: SCADA event ingestion format', owner:'p3', status:'in-progress', prio:'med',   due:'04-26' },
+  { id:'T-310', proj:'PRJ-06', title:'PMU mounting plan — pole survey', owner:'p6', status:'todo', prio:'low', due:'05-02' },
+  { id:'T-311', proj:'PRJ-01', title:'Arc-flash study sign-off', owner:'p1', status:'review', prio:'high', due:'04-19' },
+  { id:'T-312', proj:'PRJ-02', title:'Feature flag: shadow-mode toggle', owner:'p7', status:'done', prio:'med', due:'04-15' },
+  { id:'T-302', proj:'PRJ-01', title:'Update as-built drawings rev C', owner:'p8', status:'todo', prio:'med', due:'04-24' },
+];
+const OKRS = [
+  { id:'O1', title:'Ship Harvey IA v2 to production',   owner:'p7', progress:48 },
+  { id:'O2', title:'Zero unplanned outages in west corridor', owner:'p1', progress:71 },
+  { id:'O3', title:'50 MW new solar capacity online',   owner:'p4', progress:62 },
+  { id:'O4', title:'100k residential smart-meters live',owner:'p2', progress:58 },
+];
+const STATUS_META = {
+  'planning':{label:'Planning',dot:'var(--ink-4)'},
+  'active':  {label:'Active',  dot:'var(--accent)'},
+  'at-risk': {label:'At risk', dot:'var(--warn)'},
+  'blocked': {label:'Blocked', dot:'var(--risk)'},
+  'on-track':{label:'On track',dot:'var(--ok)'},
+};
+const TASK_STATUS_META = {
+  todo:{label:'To do',c:'var(--ink-4)'},
+  'in-progress':{label:'In progress',c:'var(--accent)'},
+  review:{label:'In review',c:'#7a52c0'},
+  blocked:{label:'Blocked',c:'var(--risk)'},
+  done:{label:'Done',c:'var(--ok)'},
+};
+const PRIO_META = {
+  urgent:{label:'Urgent',c:'var(--risk)'},
+  high:{label:'High',c:'var(--warn)'},
+  med:{label:'Med',c:'var(--ink-3)'},
+  low:{label:'Low',c:'var(--ink-4)'},
+};
+const TODAY_BLOCKS = [
+  { t:7.5, d:0.5, kind:'ritual',  label:'Morning walk + planning'},
+  { t:9.0, d:2.5, kind:'focus',   label:'Runbook v3 — SE-07 cutover', proj:'GRD-22'},
+  { t:11.5,d:0.5, kind:'meeting', label:'Daily standup — Grid' },
+  { t:12.0,d:0.75,kind:'break',   label:'Lunch' },
+  { t:13.0,d:1.0, kind:'meeting', label:'Harvey IA × Grid sync' },
+  { t:14.0,d:2.5, kind:'focus',   label:'Arc-flash study review', proj:'SOL-14' },
+  { t:16.5,d:0.75,kind:'review',  label:'1:1 with Sofía'},
+  { t:17.25,d:0.75,kind:'meeting',label:'Exec status — Q2 outlook'},
+];
+
+function avatar(id, size){
+  const p = PEOPLE.find(x=>x.id===id); if(!p) return '';
+  const hue = (id.charCodeAt(2)*37)%360;
+  return `<span class="avatar" style="width:${size}px;height:${size}px;border-radius:${size}px;background:oklch(0.72 0.08 ${hue});font-size:${size*0.42}px">${p.init}</span>`;
+}
+function avatarStack(ids,size){
+  const max=4, show=ids.slice(0,max), extra=ids.length-show.length;
+  return '<span style="display:inline-flex">'+show.map((id,i)=>`<span style="margin-left:${i===0?0:-(size*0.32)}px;box-shadow:0 0 0 2px var(--paper)">${avatar(id,size)}</span>`).join('')+(extra>0?`<span class="avatar" style="margin-left:${-(size*0.32)}px;background:var(--navy-100);color:var(--ink-2);width:${size}px;height:${size}px;font-size:${size*0.36}px;box-shadow:0 0 0 2px var(--paper)">+${extra}</span>`:'')+'</span>';
+}
+function orb(health,progress){
+  const c = health==='at-risk'?'var(--warn)':health==='blocked'?'var(--risk)':health==='on-track'?'var(--ok)':'var(--accent)';
+  const r=6, circ=2*Math.PI*r, d=(progress/100)*circ;
+  return `<svg width="14" height="14" viewBox="0 0 14 14" style="flex:none"><circle cx="7" cy="7" r="${r}" fill="none" stroke="var(--line)" stroke-width="1.5"/><circle cx="7" cy="7" r="${r}" fill="none" stroke="${c}" stroke-width="1.5" stroke-dasharray="${d} ${circ}" stroke-linecap="round" transform="rotate(-90 7 7)"/></svg>`;
+}
+function pillStatus(s){
+  const m=STATUS_META[s]||STATUS_META.active;
+  return `<span class="pill"><span class="dot" style="background:${m.dot}"></span>${m.label}</span>`;
+}
+function fmtTime(t){const h=Math.floor(t),m=Math.round((t-h)*60);const hr=h>12?h-12:h===0?12:h;const ap=h>=12?'p':'a';return m?`${hr}:${String(m).padStart(2,'0')}${ap}`:`${hr}${ap}`;}
+
+// ——— AGENDA page ———
+(function(){
+  const a = document.getElementById('agenda-list');
+  a.innerHTML = TODAY_BLOCKS.filter(b=>b.kind!=='break').map((b,i)=>{
+    const c = b.kind==='focus'?'var(--accent)':b.kind==='review'?'#7a52c0':'var(--ink-4)';
+    return `<div style="display:flex;align-items:center;gap:12px;padding:7px 0;border-top:${i?'1px solid var(--line-2)':'0'}">
+      <span class="mono" style="font-size:11px;color:var(--ink-3);width:84px">${fmtTime(b.t)}–${fmtTime(b.t+b.d)}</span>
+      <span style="width:4px;height:22px;background:${c};border-radius:2px"></span>
+      <span style="font-size:12.5px;font-weight:500;flex:1">${b.label}</span>
+      ${b.proj?`<span class="pill mono" style="font-size:10px">${b.proj}</span>`:''}
+    </div>`;
+  }).join('');
+
+  const risks = [
+    {c:'var(--warn)', t:'ABB relay shipment slipped 3 weeks', s:'SE-07 Retrofit · owner Sofía'},
+    {c:'var(--risk)', t:'PMU customs clearance still held',   s:'Grid Frequency · 8 weeks overdue'},
+    {c:'var(--warn)', t:'Forecaster MAPE regression on cohort B', s:'Harvey IA v2 · owner Valentina'},
+  ];
+  document.getElementById('risks').innerHTML = risks.map((r,i)=>`
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-top:${i?'1px solid var(--line-2)':'0'}">
+      <span class="dot" style="background:${r.c};margin-top:6px;width:8px;height:8px"></span>
+      <div style="flex:1">
+        <div style="font-size:12.5px;font-weight:500">${r.t}</div>
+        <div style="font-size:11px;color:var(--ink-3);margin-top:2px">${r.s}</div>
+      </div>
+    </div>`).join('');
+
+  const inbox = [
+    {who:'p5', txt:'pulled you into', what:'Exec status — Q2 outlook', t:'8m'},
+    {who:'p7', txt:'asked review on', what:'Retrain forecaster Q1 data', t:'21m'},
+    {who:'p4', txt:'updated status on', what:'Valencia Solar · Phase II', t:'1h'},
+    {who:'p3', txt:'shipped', what:'Feature flag: shadow-mode', t:'y’day'},
+  ];
+  document.getElementById('inbox').innerHTML = inbox.map((n,i)=>`
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-top:${i?'1px solid var(--line-2)':'0'}">
+      ${avatar(n.who,20)}
+      <div style="flex:1;font-size:12px"><b>${PEOPLE.find(p=>p.id===n.who).name.split(' ')[0]}</b> <span style="color:var(--ink-3)">${n.txt}</span> <b>${n.what}</b></div>
+      <span class="mono" style="font-size:10px;color:var(--ink-4)">${n.t}</span>
+    </div>`).join('');
+})();
+
+// ——— TIME STRIP ———
+(function(){
+  const svg = document.getElementById('strip-svg');
+  const W=1300, H=140, start=7, end=18, hourW=W/(end-start);
+  const xh = (t)=> (t-start)*hourW;
+  let out = '';
+  for (let hr=start; hr<=end; hr++){
+    out += `<line x1="${xh(hr)}" x2="${xh(hr)}" y1="22" y2="${H-6}" stroke="var(--line-2)"/>
+            <text x="${xh(hr)+4}" y="16" font-size="10" font-family="Geist Mono" fill="var(--ink-4)">${hr<=12?hr:hr-12}${hr<12?'a':'p'}</text>`;
+  }
+  out += `<rect x="${xh(12)}" y="24" width="${xh(13)-xh(12)}" height="${H-32}" fill="var(--paper-2)" opacity=".6"/>`;
+  for (const b of TODAY_BLOCKS){
+    const bx = xh(b.t), bw = b.d*hourW - 5;
+    const k = b.kind;
+    const kc = k==='focus'?{bg:'color-mix(in oklab, var(--accent) 14%, white)',bd:'var(--accent)',ink:'var(--accent-ink)'}:
+               k==='meeting'?{bg:'var(--paper-2)',bd:'var(--ink-4)',ink:'var(--ink)'}:
+               k==='review'?{bg:'color-mix(in oklab, #7a52c0 14%, white)',bd:'#7a52c0',ink:'#3a2470'}:
+               k==='break'?{bg:'transparent',bd:'var(--line)',ink:'var(--ink-4)'}:
+               {bg:'#fff',bd:'var(--line)',ink:'var(--ink-3)'};
+    out += `<rect x="${bx+2}" y="26" width="${bw}" height="90" rx="6" fill="${kc.bg}" stroke="${kc.bd}" ${k==='break'?'stroke-dasharray="3 3"':''}/>
+            <text x="${bx+10}" y="46" font-size="11" font-weight="600" fill="${kc.ink}" style="letter-spacing:.05em">${k.toUpperCase()}</text>
+            <text x="${bx+10}" y="64" font-size="12" fill="var(--ink)" font-weight="500">${b.label.length>bw/6.5?b.label.slice(0,Math.max(6,Math.floor(bw/6.5)))+'…':b.label}</text>
+            ${b.proj?`<text x="${bx+10}" y="82" font-size="10" font-family="Geist Mono" fill="var(--ink-3)">${b.proj}</text>`:''}`;
+  }
+  const nx = xh(15.25);
+  out += `<line x1="${nx}" x2="${nx}" y1="20" y2="${H-4}" stroke="var(--accent)" stroke-width="1.5"/>
+          <circle cx="${nx}" cy="20" r="4" fill="var(--accent)"/>`;
+  svg.innerHTML = out;
+
+  // Pulled
+  document.getElementById('pulled').innerHTML = ['T-305','T-311','T-306'].map((id,i)=>{
+    const t=TASKS.find(x=>x.id===id); const st=TASK_STATUS_META[t.status]; const pr=PRIO_META[t.prio]; const p=PROJECTS.find(pp=>pp.id===t.proj);
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:${i?'1px solid var(--line-2)':'0'}">
+      <span style="width:13px;height:13px;border:1.5px solid ${st.c};border-radius:3px;flex:none"></span>
+      <span class="mono" style="font-size:10px;color:var(--ink-4)">${t.id}</span>
+      <span style="flex:1;font-size:12.5px;font-weight:500">${t.title}</span>
+      <span class="pill" style="color:${pr.c}">${pr.label}</span>
+      <span class="mono" style="font-size:10px;color:var(--ink-3)">${p.code}</span>
+      <span class="mono" style="font-size:10px;color:var(--ink-3)">${t.due}</span>
+    </div>`;
+  }).join('');
+
+  // OKRs
+  document.getElementById('okrs').innerHTML = OKRS.map((o,i)=>`
+    <div style="padding:7px 0;border-top:${i?'1px solid var(--line-2)':'0'}">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px">
+        <span class="mono" style="font-size:10px;color:var(--ink-4)">${o.id}</span>
+        <span style="flex:1;font-size:12.5px;font-weight:500">${o.title}</span>
+        ${avatar(o.owner,18)}
+        <span class="mono" style="font-size:11px;width:32px;text-align:right">${o.progress}%</span>
+      </div>
+      <div class="bar"><span style="width:${o.progress}%"></span></div>
+    </div>`).join('');
+})();
+
+// ——— PROJECT DETAIL (SE-07) ———
+(function(){
+  const krs = [
+    {l:'Q2: cutover window held', p:40},
+    {l:'Q2: zero unplanned outages during retrofit', p:22},
+    {l:'Runbook v3 signed off by safety', p:60},
+  ];
+  document.getElementById('krs').innerHTML = krs.map((k,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-top:${i?'1px solid var(--line-2)':'0'}">
+      <span class="mono" style="font-size:10px;color:var(--ink-4);width:32px">KR-${i+1}</span>
+      <span style="flex:1;font-size:12.5px">${k.l}</span>
+      <div style="width:120px" class="bar"><span style="width:${k.p}%"></span></div>
+    </div>`).join('');
+
+  const pj = PROJECTS.find(p=>p.id==='PRJ-03');
+  const tsk = TASKS.filter(t=>t.proj===pj.id);
+  document.getElementById('proj-tasks').innerHTML = tsk.map((t,i)=>{
+    const st=TASK_STATUS_META[t.status];
+    return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-top:${i?'1px solid var(--line-2)':'0'}">
+      <span style="width:12px;height:12px;border:1.5px solid ${st.c};border-radius:3px;flex:none"></span>
+      <span class="mono" style="font-size:10px;color:var(--ink-4)">${t.id}</span>
+      <span style="flex:1;font-size:12.5px">${t.title}</span>
+      ${avatar(t.owner,18)}
+      <span class="mono" style="font-size:10px;color:var(--ink-3);width:40px;text-align:right">${t.due}</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('team').innerHTML = pj.team.map((id,i)=>{
+    const per = PEOPLE.find(x=>x.id===id);
+    const c = per.load>90?'var(--risk)':per.load>75?'var(--warn)':'var(--accent)';
+    return `<div style="display:flex;align-items:center;gap:12px;padding:7px 0;border-top:${i?'1px solid var(--line-2)':'0'}">
+      ${avatar(id,26)}
+      <div style="flex:1">
+        <div style="font-size:12.5px;font-weight:500">${per.name}</div>
+        <div style="font-size:11px;color:var(--ink-3)">${per.role}</div>
+      </div>
+      <div style="width:90px">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ink-4);margin-bottom:2px" class="mono"><span>load</span><span>${per.load}%</span></div>
+        <div class="bar"><span style="width:${Math.min(100,per.load)}%;background:${c}"></span></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('deps').innerHTML = DEPS.filter(d=>d.from===pj.id||d.to===pj.id).map((d,i)=>{
+    const other = d.from===pj.id ? PROJECTS.find(p=>p.id===d.to) : PROJECTS.find(p=>p.id===d.from);
+    const dir = d.from===pj.id?'out':'in';
+    const c = d.kind==='blocks'?'var(--risk)':d.kind==='feeds'?'var(--accent)':'#7a52c0';
+    return `<div style="display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-top:${i?'1px solid var(--line-2)':'0'}">
+      <span style="color:${c};margin-top:2px">${dir==='out'?'→':'←'}</span>
+      <div style="flex:1;font-size:12px"><div><span style="color:var(--ink-3)">${d.kind} </span><b>${other.name}</b></div></div>
+    </div>`;
+  }).join('');
+})();
+
+// ——— ROADMAP ———
+(function(){
+  const rows = document.getElementById('rm-rows');
+  rows.innerHTML = PROJECTS.map((p,i)=>`
+    <div style="height:44px;border-bottom:${i<PROJECTS.length-1?'1px solid var(--line-2)':'0'};padding:0 14px;display:flex;align-items:center;gap:10px">
+      ${orb(p.health,p.progress)}
+      <span class="mono" style="font-size:10px;color:var(--ink-4)">${p.code}</span>
+      <span style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name.split('·')[0]}</span>
+    </div>`).join('');
+
+  const svg = document.getElementById('rm-svg');
+  const W=1060, headerH=44, laneH=44;
+  let out = '';
+  const Q = ['Q1 ’26','Q2 ’26','Q3 ’26','Q4 ’26'];
+  const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  for(let i=0;i<4;i++){
+    const qx = (W/4)*i;
+    out += `<rect x="${qx}" y="0" width="${W/4}" height="${headerH}" fill="${i%2?'transparent':'var(--paper-2)'}"/>
+            <text x="${qx+12}" y="18" font-size="11" fill="var(--ink-3)" font-weight="600">${Q[i].toUpperCase()}</text>`;
+    for(let mi=0;mi<3;mi++){
+      out += `<text x="${qx + (W/12)*mi + 8}" y="36" font-size="10" font-family="Geist Mono" fill="var(--ink-4)">${M[i*3+mi]}</text>`;
+    }
+    if(i>0) out += `<line x1="${qx}" x2="${qx}" y1="0" y2="${headerH+PROJECTS.length*laneH}" stroke="var(--line)"/>`;
+  }
+  for(let i=1;i<12;i++) out += `<line x1="${(W/12)*i}" x2="${(W/12)*i}" y1="${headerH}" y2="${headerH+PROJECTS.length*laneH}" stroke="var(--line-2)"/>`;
+  for(let i=0;i<PROJECTS.length;i++) out += `<line x1="0" x2="${W}" y1="${headerH+(i+1)*laneH}" y2="${headerH+(i+1)*laneH}" stroke="var(--line-2)"/>`;
+
+  const boxes = PROJECTS.map((p,i)=>{
+    const x = p.start*W, w = (p.end-p.start)*W;
+    const y = headerH + i*laneH + 8, h=laneH-16;
+    return { p, x, w, y, h };
+  });
+  for(const b of boxes){
+    const c = `oklch(0.72 0.09 ${b.p.hue})`;
+    const c2 = b.p.health==='at-risk'?'var(--warn)':b.p.health==='blocked'?'var(--risk)':`oklch(0.55 0.14 ${b.p.hue})`;
+    out += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="6" fill="${c}" opacity=".35"/>
+            <rect x="${b.x}" y="${b.y}" width="${b.w*(b.p.progress/100)}" height="${b.h}" rx="6" fill="${c2}"/>
+            <text x="${b.x+8}" y="${b.y+b.h/2+4}" font-size="11" font-weight="600" fill="white">${b.p.progress}% · ${b.p.name.split('·')[0].trim()}</text>`;
+  }
+  // deps
+  const boxOf = id => boxes.find(b=>b.p.id===id);
+  for(const d of DEPS){
+    const a = boxOf(d.from), b = boxOf(d.to); if(!a||!b) continue;
+    const x1 = a.x+a.w, y1 = a.y+a.h/2, x2=b.x, y2=b.y+b.h/2;
+    const dx = Math.abs(x2-x1)*0.4;
+    const col = d.kind==='blocks'?'var(--risk)':d.kind==='feeds'?'var(--accent)':'#7a52c0';
+    out += `<path d="M${x1} ${y1} C ${x1+dx} ${y1}, ${x2-dx} ${y2}, ${x2} ${y2}" fill="none" stroke="${col}" stroke-width="1.4" stroke-dasharray="3 3" opacity=".75"/>
+            <circle cx="${x2}" cy="${y2}" r="2.2" fill="${col}"/>`;
+  }
+  // now line
+  const nx = 0.29 * W;
+  out += `<line x1="${nx}" x2="${nx}" y1="${headerH-6}" y2="${headerH+PROJECTS.length*laneH}" stroke="var(--accent)" stroke-width="1.2" stroke-dasharray="4 3"/>
+          <circle cx="${nx}" cy="${headerH-6}" r="3" fill="var(--accent)"/>`;
+  svg.innerHTML = out;
+
+  // Heat band
+  const depts = ['Grid','Solar','Residential','Harvey IA','Ops'];
+  const heat = document.getElementById('heat');
+  const rng = (i,j)=>((i*7+j*13+3)%11)/10;
+  let html = `<div style="display:grid;grid-template-columns:140px repeat(12, 1fr);gap:4px">`;
+  html += `<div style="padding:4px 0;font-size:10px;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Dept / month</div>`;
+  M.forEach((m,mi)=>html += `<div style="padding:4px 0;font-size:10px;color:var(--ink-4);text-align:center" class="mono">${m}</div>`);
+  depts.forEach((d,di)=>{
+    html += `<div style="padding:6px 0;font-size:12px;font-weight:500">${d}</div>`;
+    M.forEach((m,mi)=>{
+      const v = 0.3 + rng(di,mi)*0.9;
+      const col = v>1.0?'var(--risk)':v>0.85?'var(--warn)':'var(--accent)';
+      const op = (v>1?1:v)*0.85;
+      html += `<div style="height:22px;border-radius:4px;background:${col};opacity:${op}"></div>`;
+    });
+  });
+  html += `</div>`;
+  heat.innerHTML = html;
+})();
+
+// ——— KANBAN ———
+(function(){
+  const cols = ['todo','in-progress','review','blocked','done'];
+  const el = document.getElementById('kanban');
+  el.innerHTML = cols.map(st=>{
+    const m = TASK_STATUS_META[st];
+    const items = TASKS.filter(t=>t.status===st);
+    return `<div style="background:var(--paper-2);border-radius:10px;padding:10px;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:8px;padding:2px 4px 8px">
+        <span class="dot" style="background:${m.c};width:7px;height:7px"></span>
+        <span style="font-size:12px;font-weight:600">${m.label}</span>
+        <span class="mono" style="font-size:10px;color:var(--ink-4)">${items.length}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;overflow:hidden">
+        ${items.map(t=>{
+          const p = PROJECTS.find(pp=>pp.id===t.proj);
+          const pr = PRIO_META[t.prio];
+          return `<div class="card" style="padding:10px">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+              <span class="mono" style="font-size:9px;color:var(--ink-4)">${t.id}</span>
+              <span style="flex:1"></span>
+              <span class="pill" style="font-size:10px;color:${pr.c}">${pr.label}</span>
+            </div>
+            <div style="font-size:12px;font-weight:500;line-height:1.35;margin-bottom:8px">${t.title}</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--ink-3)">
+              <span class="row" style="gap:4px"><span style="width:5px;height:5px;border-radius:5px;background:oklch(0.65 0.14 ${p.hue})"></span><span class="mono">${p.code}</span></span>
+              ${avatar(t.owner,16)}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+})();
+
+// ——— CAPACITY rows ———
+(function(){
+  const rows = document.getElementById('cap-rows');
+  rows.innerHTML = PEOPLE.map((pr,i)=>{
+    const allocs = [
+      { p: PROJECTS[i%PROJECTS.length], h: pr.load*0.5 },
+      { p: PROJECTS[(i+2)%PROJECTS.length], h: pr.load*0.3 },
+      { p: PROJECTS[(i+4)%PROJECTS.length], h: pr.load*0.2 },
+    ];
+    return `<div style="display:flex;align-items:center;gap:14px;padding:8px 0;border-top:${i?'1px solid var(--line-2)':'0'}">
+      ${avatar(pr.id,26)}
+      <div style="width:170px">
+        <div style="font-size:12.5px;font-weight:500">${pr.name}</div>
+        <div style="font-size:11px;color:var(--ink-3)">${pr.role}</div>
+      </div>
+      <div style="flex:1;height:16px;display:flex;border-radius:6px;overflow:hidden;background:var(--paper-2);position:relative">
+        ${allocs.map((a,ai)=>`<div style="width:${a.h}%;background:oklch(${0.55+ai*0.05} 0.14 ${a.p.hue})"></div>`).join('')}
+        <div style="position:absolute;top:0;bottom:0;left:100%;margin-left:-1px;width:1px;background:var(--ink)"></div>
+      </div>
+      <span class="mono" style="font-size:12px;font-weight:600;width:44px;text-align:right;color:${pr.load>100?'var(--risk)':pr.load>85?'var(--warn)':'var(--ink-2)'}">${pr.load}%</span>
+    </div>`;
+  }).join('');
+})();
+
+// ——— PROJECTS LIST ———
+(function(){
+  const tb = document.querySelector('#projects-table tbody');
+  tb.innerHTML = PROJECTS.map(p=>`
+    <tr>
+      <td>${orb(p.health,p.progress)}</td>
+      <td class="mono" style="color:var(--ink-3)">${p.code}</td>
+      <td style="font-weight:500">${p.name}</td>
+      <td>${pillStatus(p.status)}</td>
+      <td><span class="row" style="gap:6px">${avatar(p.owner,18)}<span>${PEOPLE.find(x=>x.id===p.owner).name.split(' ')[0]}</span></span></td>
+      <td class="mono" style="color:var(--ink-3)">${p.q}</td>
+      <td>${avatarStack(p.team,18)}</td>
+      <td style="text-align:right"><span class="row" style="gap:6px;justify-content:flex-end"><span class="bar" style="width:60px"><span style="width:${p.progress}%"></span></span><span class="mono" style="font-size:11px;width:28px;text-align:right">${p.progress}%</span></span></td>
+    </tr>`).join('');
+})();
+
+// ——— EXEC per-project ———
+(function(){
+  const el = document.getElementById('exec-rows');
+  el.innerHTML = PROJECTS.map((p,i)=>{
+    const c = p.health==='at-risk'?'var(--warn)':p.health==='blocked'?'var(--risk)':'var(--accent)';
+    const blocker = { 'PRJ-03':'Waiting on ABB relay shipment — ETA slipped 3 weeks', 'PRJ-06':'Customs clearance held 8 weeks on PMU shipment' }[p.id];
+    return `<div style="display:grid;grid-template-columns:240px 1fr 120px 120px;padding:10px 14px;border-top:${i?'1px solid var(--line-2)':'0'};gap:14px;align-items:center">
+      <div style="display:flex;align-items:center;gap:10px">
+        ${orb(p.health,p.progress)}
+        <div>
+          <div style="font-size:12.5px;font-weight:500">${p.name.split('·')[0]}</div>
+          <div class="mono" style="font-size:10px;color:var(--ink-3)">${p.code} · ${p.q}</div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--ink-2);text-wrap:pretty">${blocker||p.summary}</div>
+      ${pillStatus(p.health)}
+      <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end">
+        <span class="bar" style="width:70px"><span style="width:${p.progress}%;background:${c}"></span></span>
+        <span class="mono" style="font-size:12px;width:32px;text-align:right">${p.progress}%</span>
+      </div>
+    </div>`;
+  }).join('');
+})();
+
+// ——— MOBILE frames ———
+(function(){
+  const frameShell = (inner) => `
+    <div style="width:300px;height:620px;background:#000;border-radius:36px;padding:8px;box-shadow:0 30px 60px -20px rgba(10,20,40,.3), 0 0 0 1px rgba(0,0,0,.4);position:relative">
+      <div style="width:100%;height:100%;background:var(--paper);border-radius:28px;overflow:hidden;display:flex;flex-direction:column;position:relative">
+        <div style="height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:12px;font-weight:600;flex:none">
+          <span class="mono">9:41</span>
+          <div style="position:absolute;left:50%;transform:translateX(-50%);top:10px;width:88px;height:22px;background:#000;border-radius:16px"></div>
+          <span style="font-size:10px">••• ▂▃▄▅</span>
+        </div>
+        ${inner}
+      </div>
+    </div>`;
+  document.getElementById('phone-today').innerHTML = frameShell(`
+    <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+      <div style="padding:8px 18px 4px">
+        <div style="font-size:10px;color:var(--ink-3);letter-spacing:.05em;text-transform:uppercase;font-weight:600">Friday Apr 17</div>
+        <div class="serif" style="font-size:22px">Morning, Andrea</div>
+      </div>
+      <div style="padding:0 14px 8px">
+        <div style="background:var(--paper-2);border-radius:10px;padding:10px">
+          <div style="font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em;font-weight:600">Now</div>
+          <div style="font-size:13px;font-weight:600;margin-top:2px">Runbook v3 — SE-07</div>
+          <div style="font-size:10px;color:var(--ink-3);margin-top:1px">9:00a–11:30a · deep focus</div>
+          <div class="bar" style="margin-top:8px"><span style="width:62%"></span></div>
+          <div class="mono" style="font-size:9px;color:var(--ink-4);margin-top:3px">1h 35m remaining</div>
+        </div>
+      </div>
+      <div style="padding:2px 18px;font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em;font-weight:600">Up next</div>
+      <div style="padding:0 14px;overflow:hidden;flex:1">
+        ${TODAY_BLOCKS.filter(b=>b.t>11.4&&b.kind!=='break').slice(0,4).map(b=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid var(--line-2)">
+            <span class="mono" style="font-size:10px;color:var(--ink-3);width:44px">${fmtTime(b.t)}</span>
+            <span style="width:3px;height:20px;border-radius:2px;background:${b.kind==='focus'?'var(--accent)':b.kind==='review'?'#7a52c0':'var(--ink-4)'}"></span>
+            <span style="font-size:11.5px;font-weight:500;flex:1">${b.label}</span>
+          </div>`).join('')}
+        <div style="padding:8px 4px 2px;font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em;font-weight:600">Pulled</div>
+        ${['T-305','T-311','T-306'].map(id=>{const t=TASKS.find(x=>x.id===id);const st=TASK_STATUS_META[t.status];return`
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid var(--line-2)">
+            <span style="width:12px;height:12px;border:1.5px solid ${st.c};border-radius:3px;flex:none"></span>
+            <span style="font-size:11px;flex:1">${t.title}</span>
+          </div>`;}).join('')}
+      </div>
+      <div style="height:50px;border-top:1px solid var(--line);display:flex;align-items:flex-start;justify-content:space-around;padding-top:6px;background:var(--paper);flex:none;font-size:9px;color:var(--ink-3)">
+        <div style="color:var(--accent)">● Today</div><div>▤ Board</div><div>✉ Inbox</div><div>▣ Projects</div>
+      </div>
+    </div>
+  `);
+
+  const p = PROJECTS.find(x=>x.id==='PRJ-03');
+  document.getElementById('phone-project').innerHTML = frameShell(`
+    <div style="flex:1;overflow:auto;display:flex;flex-direction:column">
+      <div style="padding:10px 18px 14px;background:linear-gradient(160deg, oklch(0.92 0.04 ${p.hue}), var(--paper))">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:14px">‹</span>
+          <span class="mono" style="font-size:10px;color:var(--ink-3)">${p.code}</span>
+        </div>
+        <div class="serif" style="font-size:19px;margin:8px 0 4px">${p.name}</div>
+        <div style="display:flex;gap:6px">${pillStatus(p.status)}<span class="pill">${p.q}</span></div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:10px">${orb(p.health,p.progress)}<span style="font-size:20px;font-family:var(--font-serif);font-weight:600">${p.progress}%</span><span style="flex:1"></span>${avatarStack(p.team,20)}</div>
+      </div>
+      <div style="padding:6px 14px 10px">
+        <div style="display:flex;gap:6px">
+          ${['Overview','Tasks','Docs','Activity'].map((t,i)=>`<span style="padding:5px 10px;border-radius:16px;font-size:11px;font-weight:500;background:${i===1?'var(--ink)':'var(--paper-2)'};color:${i===1?'white':'var(--ink-2)'}">${t}</span>`).join('')}
+        </div>
+      </div>
+      <div style="padding:0 14px 14px">
+        ${TASKS.filter(t=>t.proj===p.id).map(t=>{const st=TASK_STATUS_META[t.status];return`
+          <div style="padding:10px;background:var(--paper);border:1px solid var(--line);border-radius:10px;margin-bottom:7px">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+              <span class="mono" style="font-size:9px;color:var(--ink-4)">${t.id}</span>
+              ${pillStatus(t.status)}
+              <span style="flex:1"></span>
+              <span class="pill" style="font-size:10px;color:${PRIO_META[t.prio].c}">${PRIO_META[t.prio].label}</span>
+            </div>
+            <div style="font-size:12px;font-weight:500;line-height:1.35">${t.title}</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:8px">
+              ${avatar(t.owner,16)}
+              <span style="font-size:10px;color:var(--ink-3)">${PEOPLE.find(pp=>pp.id===t.owner).name.split(' ')[0]}</span>
+              <span style="flex:1"></span>
+              <span class="mono" style="font-size:10px;color:var(--ink-3)">${t.due}</span>
+            </div>
+          </div>`;}).join('')}
+      </div>
+    </div>
+  `);
+})();
+</script>
+
+<script>
+(async () => {
+  try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch(e){}
+  await new Promise(r => setTimeout(r, 500));
+  window.print();
+})();
+</script>
+</body>
+</html>
